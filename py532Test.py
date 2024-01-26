@@ -5,8 +5,6 @@ from pymongo import MongoClient
 from datetime import datetime
 from gpiozero import Button
 
-import time
-
 print("Ready. Tap the NFC Tag to create/update an attendance.")
 print("Press Ctrl+C to exit.")
 
@@ -25,67 +23,82 @@ downButton = Button(18, pull_up=False)
 leftButton = Button(27, pull_up=False)
 rightButton = Button(22, pull_up=False)
 
-# Initial state
-collections = [courses_collection, term_collection, section_collection]
-payloads = [[], [], []]
-current_collection_index = 0
-current_payload_index = 0
-
-def switch_collection(direction):
-    global current_collection_index, current_payload_index
-    if direction == "up":
-        current_collection_index = (current_collection_index - 1) % len(collections)
-    elif direction == "down":
-        current_collection_index = (current_collection_index + 1) % len(collections)
-    current_payload_index = 0
-
-def switch_payload(direction):
-    global current_payload_index
-    if direction == "left":
-        current_payload_index = (current_payload_index - 1) % len(payloads[current_collection_index])
-    elif direction == "right":
-        current_payload_index = (current_payload_index + 1) % len(payloads[current_collection_index])
-
-def display_current_state():
-    current_collection = collections[current_collection_index]
-    current_payload = payloads[current_collection_index]
-    print(f"Selected Collection: {current_collection.name}")
-    print(f"Selected Payload: {current_payload}")
-    # Add any additional logic or processing here
-
-def handle_button_press(button):
-    if button == upButton or button == downButton:
-        switch_collection("up" if button == upButton else "down")
-    elif button == leftButton or button == rightButton:
-        switch_payload("left" if button == leftButton else "right")
-
-# Set up button handlers
-upButton.when_pressed = lambda: handle_button_press(upButton)
-downButton.when_pressed = lambda: handle_button_press(downButton)
-leftButton.when_pressed = lambda: handle_button_press(leftButton)
-rightButton.when_pressed = lambda: handle_button_press(rightButton)
-
-try:
-    while True:
-        display_current_state()
-
-except KeyboardInterrupt:
-    print("Program terminated.")
-    
 # Initialize pn532 components
 pn532 = Pn532_i2c()
 pn532.SAMconfigure()
 
-try:
-    card_data = pn532.read_mifare().get_data()
-    card_data_formatted = ' '.join(format(x, '02X') for x in card_data)
-    nfc_uid = ' '.join(card_data_formatted.split()[7:])
-    
-    # Find the student based on the NFC UID
-    student = students_collection.find_one({"nfcUID": nfc_uid})
-    if not student:
-        print("Student not found for the given NFC UID.")
-    else:
+# Initial state
+collections = [courses_collection, term_collection, section_collection]
+current_collection_index = 0
+current_payload_index = 0
+
+def switch_collection(direction):
+    global current_collection_index
+    if direction == "up":
+        current_collection_index = (current_collection_index - 1) % len(collections)
+    elif direction == "down":
+        current_collection_index = (current_collection_index + 1) % len(collections)
+
+def switch_payload(direction):
+    global current_payload_index
+    current_list = collections[current_collection_index]
+    if current_list:  # Check if the list is not empty
+        if direction == "left":
+            current_payload_index = (current_payload_index - 1) % len(current_list)
+        elif direction == "right":
+            current_payload_index = (current_payload_index + 1) % len(current_list)
+
+# Read NFC UID and check if student exists 
+def read_nfc_and_handle_attendance():
+    try:
+        # Read NFC UID and format it to readable HEX
+        card_data = pn532.read_mifare().get_data()
+        card_data_formatted = ' '.join(format(x, '02X') for x in card_data)
+        nfc_uid = ' '.join(card_data_formatted.split()[7:])
+
+        # Find the student based on the NFC UID
+        student = students_collection.find_one({"nfcUID": nfc_uid})
+        if not student:
+            print("Student not found for the given NFC UID.")
+        else:
+            # Handle attendance logic 
+            handle_attendance_logic(student)
+
+    except Exception as e:
+        print(f"Error generating attendance report: {e}")
+    finally:
+        # Close the MongoDB connection
+        if client:
+            client.close()
+
+def get_display_name(collection, index):
+    # Add collection-specific logic to get the display name
+    if collection == courses_collection:
+        return collection[index]["courseName"]
+    elif collection == term_collection:
+        return collection[index]["term"]
+    elif collection == section_collection:
+        return collection[index]["section"]
+
+def display_current_state():
+    global current_collection_index, current_payload_index
+
+    # Check if the collection has changed
+    if current_collection_index != display_current_state.last_displayed_index:
+        current_collection = collections[current_collection_index]
+        print(f"Selected Collection: {current_collection.name}")
+        display_current_state.last_displayed_index = current_collection_index
+
+    # Print the selected item within the current collection
+    current_list = collections[current_collection_index]
+    selected_item = get_display_name(current_list, current_payload_index)
+    print(f"Selected Item: {selected_item}")
+
+display_current_state.last_displayed_index = None
+
+# Checks if attendance exists and create/update it depending on the return
+def handle_attendance_logic(student):
+    try:
         # Get the current date and format it
         current_date = datetime.now().strftime("%Y-%m-%d")
         
@@ -141,12 +154,19 @@ try:
             }
             saved_report = attendances_collection.insert_one(new_attendance)
             print(f"New attendance report created with ID: {saved_report.inserted_id}")
-            
-            
-            
-except Exception as e:
-    print(f"Error generating attendance report: {e}")
-finally:
-    # Close the MongoDB connection
-    if client:
-        client.close()
+    except Exception as e:
+        print(f"Error generating attendance report: {e}")
+    finally:
+        # Close the MongoDB connection
+        if client:
+            client.close()
+    
+    
+        
+
+try:
+    while True:
+        display_current_state()
+
+except KeyboardInterrupt:
+    print("Program terminated.")
