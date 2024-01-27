@@ -3,8 +3,10 @@ from py532lib.i2c import *
 from py532lib.frame import *
 from py532lib.constants import *
 from pprint import pprint
-from datetime import datetime
+from datetime import datetime, timedelta
+from bson import ObjectId
 from gpiozero import Button
+
 import threading
 import time
 
@@ -114,16 +116,17 @@ def checkSelectedRow():
 def read_nfc():
     global data_lock
     try:
-        card_data = pn532.read_mifare().get_data()
-        card_data_formatted = ' '.join(format(x, '02X') for x in card_data)
-        nfc_uid = ' '.join(card_data_formatted.split()[7:])
+        while True: 
+            card_data = pn532.read_mifare().get_data()
+            card_data_formatted = ' '.join(format(x, '02X') for x in card_data)
+            nfc_uid = ' '.join(card_data_formatted.split()[7:])
 
-        student = students_collection.find_one({"nfcUID": nfc_uid})
-        if not student:
-            print("Student not found for the given NFC UID.")
-        else:
-            with data_lock:
-                handle_attendance_logic(student)
+            student = students_collection.find_one({"nfcUID": nfc_uid})
+            if not student:
+                print("Student not found for the given NFC UID.")
+            else:
+                with data_lock:
+                    handle_attendance_logic(student)
 
     except Exception as e:
         print(f"Error generating attendance report: {e}")
@@ -131,11 +134,11 @@ def read_nfc():
 def handle_attendance_logic(student):
     global payload
     try:
-        current_date = datetime.now().strftime("%Y-%m-%d")
+        current_date = datetime.now().strftime("%Y:%m:%d")
         current_time = datetime.now().strftime("%H:%M")
         existing_attendance = attendances_collection.find_one({
             "student": student["_id"],
-            "course": payload["courses"]["_id"],
+            "courseCode": payload["courses"]["_id"],
             "date": current_date,
         })
         
@@ -155,7 +158,7 @@ def handle_attendance_logic(student):
                 "student": student["_id"],
                 "nfcUID": student["nfcUID"],
                 "studentName": student["name"],
-                "course": payload["courses"]["_id"],
+                "courseCode": payload["courses"]["_id"],
                 "date": current_date,
                 "term": payload["term"]["term"],  
                 "section": payload["sections"]["section"],
@@ -163,13 +166,14 @@ def handle_attendance_logic(student):
                 "timeOut": None,
             }
             saved_report = attendances_collection.insert_one(new_attendance)
+            print(new_attendance)
             print(f"New attendance report created with ID: {saved_report.inserted_id}")
         time.sleep(5)
     except Exception as e:
         print(f"Error generating attendance report: {e}")
         
 nfc_thread = threading.Thread(target=read_nfc)
-nfc_thread.daemon = True  # Set the thread as a daemon to exit when the main program exits
+nfc_thread.daemon = False  # Set the thread as a daemon to exit when the main program exits
 nfc_thread.start()
 
 try:
