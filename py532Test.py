@@ -14,11 +14,15 @@ print("Press Ctrl+C to exit.")
 client = MongoClient("mongodb+srv://ClintCalumpad:StrongPassword121@attendancemonitoringsys.uigzk5u.mongodb.net/?retryWrites=true&w=majority")
 db = client["rtams-dev"]
 students_collection = db["students"]
+
 courses_collection = db["courses"]
 courses_list = list(courses_collection.find({}, {"courseName": 1, "_id": 1}))
+
 attendances_collection = db["attendances"]
+
 term_collection = db["term"]
 term_list = list(term_collection.find({}, {"term": 1, "_id": 0}))
+
 section_collection = db["sections"]
 sections_list = list(section_collection.find({}, {"section": 1, "_id": 0}))
 
@@ -33,21 +37,28 @@ pn532 = Pn532_i2c()
 pn532.SAMconfigure()
 
 # Initial state
+
+data_dict = {}
+
 collections = [courses_collection, term_collection, section_collection]
 
-current_column_index = 0  # 0 for collections, 1 for payloads
+isFirstRow = True  #  for collections, 1 for payloads
 current_index = 0
 current_collection_index = 0
 current_payload_index = 0
-selected_course = courses_list[current_payload_index]["courseName"]
-selected_term = term_list[current_payload_index]["term"]
-selected_section = sections_list[current_payload_index]["section"]
-payloads = [selected_course, selected_term, selected_section]
+
+payload = {
+    "courses": data_dict["courses"][0],
+    "term": data_dict["term"][0],
+    "sections": data_dict["sections"][0],
+}
+
+selected_key = list(payload.keys())[0]
 
 def switch_collection(direction):
     global current_collection_index, current_payload_index
     
-    if current_column_index == 0:
+    if isFirstRow == True:
         if direction == "left":
             current_collection_index = (current_collection_index - 1) % len(collections)
         elif direction == "right":
@@ -59,7 +70,7 @@ def switch_payload(button):
     
     current_collection = collections[current_collection_index]
     
-    if current_column_index == 1:
+    if isFirstRow == True:
     
         if current_collection.name == "courses" and current_collection: 
 
@@ -102,35 +113,25 @@ def read_nfc_and_handle_attendance():
         print(f"Error generating attendance report: {e}")
     
     
-def get_display_name(collection, index):
-    # Add collection-specific logic to get the display name
-    if collection == courses_collection:
-        return collection[index]["courseName"]
-    elif collection == term_collection:
-        return collection[index]["term"]
-    elif collection == section_collection:
-        return collection[index]["section"]
-    
 def display_current_state():
-    if current_column_index == 0:
-        current_column = "Collections"
-    elif current_column_index == 1:
-        current_column = "Payloads"
+    if isFirstRow == True:
+        isFirstRow = "Collections"
+    elif isFirstRow == False:
+        isFirstRow = "Payloads"
     current_collection = collections[current_collection_index]
-    current_payload = payloads[current_collection_index]
-    print(f"Selected Column: {current_column}")
+    current_payload = payload[current_collection_index]
+    print(f"Selected row: {isFirstRow}")
     print(f"Selected Collection: {current_collection.name}")
     print(f"Selected Payload: {current_payload}")
     
-def switch_column(direction):
-    global current_column_index, current_index
+def switch_row(direction):
+    global isFirstRow, current_index
     if direction == "up" or direction == "down":
-        current_column_index = (current_column_index + 1) % 2
-    current_index = 0
+        isFirstRow = not isFirstRow
 
 def handle_button_press(button):
     if button == upButton or button == downButton:
-        switch_column("up" if button == upButton else "down")
+        switch_row("up" if button == upButton else "down")
         display_current_state()
     elif button == leftButton or button == rightButton:
         switch_collection("left" if button == leftButton else "right")
