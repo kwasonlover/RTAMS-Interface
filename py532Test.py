@@ -30,28 +30,28 @@ pn532.SAMconfigure()
 # Initial state
 collections = [courses_collection, term_collection, section_collection]
 payloads = [[], [], []]
-columns = [collections, payloads]
-current_column_index = 0
+current_column_index = 0  # 0 for collections, 1 for payloads
+current_index = 0
 current_collection_index = 0
 current_payload_index = 0
 
 
-def switch_collection(button):
+def switch_collection(direction):
     global current_collection_index, current_payload_index
-    if button == leftButton:
+    if direction == "left":
         current_collection_index = (current_collection_index - 1) % len(collections)
-    elif button == rightButton:
+    elif direction == "right":
         current_collection_index = (current_collection_index + 1) % len(collections)
     current_payload_index = 0
 
-def switch_payload(button):
-    global current_payload_index
-    current_list = collections[current_collection_index]
-    if current_list:  # Check if the list is not empty
-        if button == leftButton:
-            current_payload_index = (current_payload_index - 1) % len(current_list)
-        elif button == rightButton:
-            current_payload_index = (current_payload_index + 1) % len(current_list)
+# def switch_payload(button):
+#     global current collection index, current_payload_index
+    
+#     if current_list:  # Check if the list is not empty
+#         if button == leftButton:
+#             current_payload_index = (current_payload_index - 1) % len(current_list)
+#         elif button == rightButton:
+#             current_payload_index = (current_payload_index + 1) % len(current_list)
 
 # Read NFC UID and check if student exists 
 def read_nfc_and_handle_attendance():
@@ -86,37 +86,32 @@ def get_display_name(collection, index):
         return collection[index]["section"]
 
 def display_current_state():
-    current_column = columns[current_column_index]
+    if current_column_index == 0:
+        current_column = "Collections"
+    elif current_column_index == 1:
+        current_column = "Payloads"
     current_collection = collections[current_collection_index]
     current_payload = payloads[current_collection_index]
     print(f"Selected Column: {current_column}")
     print(f"Selected Collection: {current_collection.name}")
     print(f"Selected Payload: {current_payload}")
 
-current_column_index = 0  # 0 for collections, 1 for payloads
-current_index = 0
 
-def switch_column(button):
+
+def switch_column(direction):
     global current_column_index, current_index
-    if button == upButton or button == downButton:
+    if direction == "up" or direction == "down":
         current_column_index = (current_column_index + 1) % 2
     current_index = 0
 
-def switch_element(button):
-    global current_index
-    current_list = collections if current_column_index == 0 else payloads[current_column_index]
-    if current_list:  # Check if the list is not empty
-        if button == leftButton:
-            current_index = (current_index - 1) % len(current_list)
-        elif button == rightButton:
-            current_index = (current_index + 1) % len(current_list)
+
 
 def handle_button_press(button):
     if button == upButton or button == downButton:
         switch_column("up" if button == upButton else "down")
         display_current_state()
     elif button == leftButton or button == rightButton:
-        switch_element("left" if button == leftButton else "right")
+        switch_collection("left" if button == leftButton else "right")
         display_current_state()
 
 # Checks if attendance exists and create/update it depending on the return
