@@ -5,6 +5,8 @@ from pymongo import MongoClient
 from datetime import datetime
 from gpiozero import Button
 
+import time
+
 print("Ready. Tap the NFC Tag to create/update an attendance.")
 print("Press Ctrl+C to exit.")
 
@@ -13,9 +15,12 @@ client = MongoClient("mongodb+srv://ClintCalumpad:StrongPassword121@attendancemo
 db = client["rtams-dev"]
 students_collection = db["students"]
 courses_collection = db["courses"]
+courses_list = list(courses_collection.find({}, {"courseName": 1, "_id": 1}))
 attendances_collection = db["attendances"]
 term_collection = db["term"]
+term_list = list(term_collection.find({}, {"term": 1, "_id": 0}))
 section_collection = db["sections"]
+sections_list = list(section_collection.find({}, {"section": 1, "_id": 0}))
 
 # Initialize the GPIO buttons
 upButton = Button(17, pull_up=False)
@@ -29,29 +34,53 @@ pn532.SAMconfigure()
 
 # Initial state
 collections = [courses_collection, term_collection, section_collection]
-payloads = [[], [], []]
+
 current_column_index = 0  # 0 for collections, 1 for payloads
 current_index = 0
 current_collection_index = 0
 current_payload_index = 0
-
+selected_course = courses_list[current_payload_index]["courseName"]
+selected_term = term_list[current_payload_index]["term"]
+selected_section = sections_list[current_payload_index]["section"]
+payloads = [selected_course, selected_term, selected_section]
 
 def switch_collection(direction):
     global current_collection_index, current_payload_index
-    if direction == "left":
-        current_collection_index = (current_collection_index - 1) % len(collections)
-    elif direction == "right":
-        current_collection_index = (current_collection_index + 1) % len(collections)
-    current_payload_index = 0
-
-# def switch_payload(button):
-#     global current collection index, current_payload_index
     
-#     if current_list:  # Check if the list is not empty
-#         if button == leftButton:
-#             current_payload_index = (current_payload_index - 1) % len(current_list)
-#         elif button == rightButton:
-#             current_payload_index = (current_payload_index + 1) % len(current_list)
+    if current_column_index == 0:
+        if direction == "left":
+            current_collection_index = (current_collection_index - 1) % len(collections)
+        elif direction == "right":
+            current_collection_index = (current_collection_index + 1) % len(collections)
+        current_payload_index = 0
+
+def switch_payload(button):
+    global current_collection_index, current_payload_index
+    
+    current_collection = collections[current_collection_index]
+    
+    if current_column_index == 1:
+    
+        if current_collection.name == "courses" and current_collection: 
+
+            if button == leftButton:
+                current_payload_index = (current_payload_index - 1) % len(courses_list)
+            elif button == rightButton:
+                current_payload_index = (current_payload_index + 1) % len(courses_list)
+        
+        elif current_collection.name == "term" and current_collection:
+            
+            if button == leftButton:
+                current_payload_index = (current_payload_index - 1) % len(term_list)
+            elif button == rightButton:
+                current_payload_index = (current_payload_index + 1) % len(term_list)
+        
+        elif current_collection.name == "term" and current_collection:
+            
+            if button == leftButton:
+                current_payload_index = (current_payload_index - 1) % len(sections_list)
+            elif button == rightButton:
+                current_payload_index = (current_payload_index + 1) % len(sections_list)
 
 # Read NFC UID and check if student exists 
 def read_nfc_and_handle_attendance():
@@ -71,11 +100,8 @@ def read_nfc_and_handle_attendance():
 
     except Exception as e:
         print(f"Error generating attendance report: {e}")
-    finally:
-        # Close the MongoDB connection
-        if client:
-            client.close()
-
+    
+    
 def get_display_name(collection, index):
     # Add collection-specific logic to get the display name
     if collection == courses_collection:
@@ -84,7 +110,7 @@ def get_display_name(collection, index):
         return collection[index]["term"]
     elif collection == section_collection:
         return collection[index]["section"]
-
+    
 def display_current_state():
     if current_column_index == 0:
         current_column = "Collections"
@@ -95,16 +121,12 @@ def display_current_state():
     print(f"Selected Column: {current_column}")
     print(f"Selected Collection: {current_collection.name}")
     print(f"Selected Payload: {current_payload}")
-
-
-
+    
 def switch_column(direction):
     global current_column_index, current_index
     if direction == "up" or direction == "down":
         current_column_index = (current_column_index + 1) % 2
     current_index = 0
-
-
 
 def handle_button_press(button):
     if button == upButton or button == downButton:
@@ -172,18 +194,13 @@ def handle_attendance_logic(student):
             }
             saved_report = attendances_collection.insert_one(new_attendance)
             print(f"New attendance report created with ID: {saved_report.inserted_id}")
+        time.sleep(5)
     except Exception as e:
         print(f"Error generating attendance report: {e}")
-    finally:
-        # Close the MongoDB connection
-        if client:
-            client.close()
-    
-    
-        
 
 try:
     while True:
+        read_nfc_and_handle_attendance()
         upButton.when_pressed = lambda: handle_button_press(upButton)
         downButton.when_pressed = lambda: handle_button_press(downButton)
         leftButton.when_pressed = lambda: handle_button_press(leftButton)
@@ -191,3 +208,5 @@ try:
 
 except KeyboardInterrupt:
     print("Program terminated.")
+    if client:
+        client.close()
