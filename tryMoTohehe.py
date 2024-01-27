@@ -168,13 +168,18 @@ def handle_attendance_logic(student):
     except Exception as e:
         print(f"Error generating attendance report: {e}")
         
+nfc_thread = threading.Thread(target=read_nfc)
+nfc_thread.daemon = True  # Set the thread as a daemon to exit when the main program exits
+nfc_thread.start()
+
 try:
     while True:
-        read_nfc()
         upButton.when_pressed = lambda: handle_button_press(upButton)
         downButton.when_pressed = lambda: handle_button_press(downButton)
         leftButton.when_pressed = lambda: handle_button_press(leftButton)
         rightButton.when_pressed = lambda: handle_button_press(rightButton)
+
+        time.sleep(0.2)
 except KeyboardInterrupt:
     print("Program terminated.")
 finally:
