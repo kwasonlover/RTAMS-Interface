@@ -147,6 +147,7 @@ def read_nfc():
 
 # Checks if attendance exists and create/update it depending on the return
 def handle_attendance_logic(student):
+    global payload
     try:
         # Get the current date and format it
         current_date = datetime.now().strftime("%Y-%m-%d")
@@ -155,24 +156,21 @@ def handle_attendance_logic(student):
         current_time = datetime.now().strftime("%H:%M")
         
         # Find the course based on the course code
-        courseCode = "MATH 20043"
-        course = courses_collection.find_one({"courseCode": courseCode})
-        print(course)
+        # course = courses_collection.find_one({"courseCode": payload["courses"]["courseCode"]})
+        # print(course)
         
         # Find the Term in mongodb
-        section_value = "4-5"
-        section = sections_collection.find_one({"section": section_value})
-        print(section)
+        # section = sections_collection.find_one({"section": payload["sections"]["section"]})
+        # print(section)
         
         # Find the term in mongodb
-        term_value = "2023-2024"
-        term = terms_collection.find_one({"term": term_value})
-        print(term)
+        # term = terms_collection.find_one({"term": payload["term"]["term"]})
+        # print(term)
         
         # Check if there is an existing attendance for the same student, course, and date
         existing_attendance = attendances_collection.find_one({
             "student": student["_id"],
-            "course": course["_id"],
+            "course": payload["courses"]["_id"],
             "date": current_date,
         })
         
@@ -194,10 +192,10 @@ def handle_attendance_logic(student):
                 "student": student["_id"],
                 "nfcUID": student["nfcUID"],
                 "studentName": student["name"],
-                "course": course["_id"],
+                "course": payload["courses"]["_id"],
                 "date": current_date,
-                "term": term["term"],  # Replace with actual term
-                "section": section["section"],  # Replace with actual section
+                "term": payload["term"]["term"],  # Replace with actual term
+                "section": payload["sections"]["section"],  # Replace with actual section
                 "timeIn": current_time,
                 "timeOut": None,
             }
@@ -206,11 +204,13 @@ def handle_attendance_logic(student):
         time.sleep(5)
     except Exception as e:
         print(f"Error generating attendance report: {e}")
+        
 
 # pprint(data_dict)
 # Main loop
 try:
     while True:
+        read_nfc()
         upButton.when_pressed = lambda: handle_button_press(upButton)
         downButton.when_pressed = lambda: handle_button_press(downButton)
         leftButton.when_pressed = lambda: handle_button_press(leftButton)

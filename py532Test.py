@@ -47,13 +47,6 @@ current_index = 0
 current_collection_index = 0
 current_payload_index = 0
 
-payload = {
-    "courses": data_dict["courses"][0],
-    "term": data_dict["term"][0],
-    "sections": data_dict["sections"][0],
-}
-
-selected_key = list(payload.keys())[0]
 
 def switch_collection(direction):
     global current_collection_index, current_payload_index
@@ -119,10 +112,10 @@ def display_current_state():
     elif isFirstRow == False:
         isFirstRow = "Payloads"
     current_collection = collections[current_collection_index]
-    current_payload = payload[current_collection_index]
+    # current_payload = payload[current_collection_index]
     print(f"Selected row: {isFirstRow}")
     print(f"Selected Collection: {current_collection.name}")
-    print(f"Selected Payload: {current_payload}")
+    # print(f"Selected Payload: {current_payload}")
     
 def switch_row(direction):
     global isFirstRow, current_index
