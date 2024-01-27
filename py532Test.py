@@ -29,23 +29,28 @@ pn532.SAMconfigure()
 
 # Initial state
 collections = [courses_collection, term_collection, section_collection]
+payloads = [[], [], []]
+columns = [collections, payloads]
+current_column_index = 0
 current_collection_index = 0
 current_payload_index = 0
 
-def switch_collection(direction):
-    global current_collection_index
-    if direction == "up":
-        current_collection_index = (current_collection_index - 1) % len(collections)
-    elif direction == "down":
-        current_collection_index = (current_collection_index + 1) % len(collections)
 
-def switch_payload(direction):
+def switch_collection(button):
+    global current_collection_index, current_payload_index
+    if button == leftButton:
+        current_collection_index = (current_collection_index - 1) % len(collections)
+    elif button == rightButton:
+        current_collection_index = (current_collection_index + 1) % len(collections)
+    current_payload_index = 0
+
+def switch_payload(button):
     global current_payload_index
     current_list = collections[current_collection_index]
     if current_list:  # Check if the list is not empty
-        if direction == "left":
+        if button == leftButton:
             current_payload_index = (current_payload_index - 1) % len(current_list)
-        elif direction == "right":
+        elif button == rightButton:
             current_payload_index = (current_payload_index + 1) % len(current_list)
 
 # Read NFC UID and check if student exists 
@@ -81,20 +86,38 @@ def get_display_name(collection, index):
         return collection[index]["section"]
 
 def display_current_state():
-    global current_collection_index, current_payload_index
+    current_column = columns[current_column_index]
+    current_collection = collections[current_collection_index]
+    current_payload = payloads[current_collection_index]
+    print(f"Selected Column: {current_column}")
+    print(f"Selected Collection: {current_collection.name}")
+    print(f"Selected Payload: {current_payload}")
 
-    # Check if the collection has changed
-    if current_collection_index != display_current_state.last_displayed_index:
-        current_collection = collections[current_collection_index]
-        print(f"Selected Collection: {current_collection.name}")
-        display_current_state.last_displayed_index = current_collection_index
+current_column_index = 0  # 0 for collections, 1 for payloads
+current_index = 0
 
-    # Print the selected item within the current collection
-    current_list = collections[current_collection_index]
-    selected_item = get_display_name(current_list, current_payload_index)
-    print(f"Selected Item: {selected_item}")
+def switch_column(button):
+    global current_column_index, current_index
+    if button == upButton or button == downButton:
+        current_column_index = (current_column_index + 1) % 2
+    current_index = 0
 
-display_current_state.last_displayed_index = None
+def switch_element(button):
+    global current_index
+    current_list = collections if current_column_index == 0 else payloads[current_column_index]
+    if current_list:  # Check if the list is not empty
+        if button == leftButton:
+            current_index = (current_index - 1) % len(current_list)
+        elif button == rightButton:
+            current_index = (current_index + 1) % len(current_list)
+
+def handle_button_press(button):
+    if button == upButton or button == downButton:
+        switch_column("up" if button == upButton else "down")
+        display_current_state()
+    elif button == leftButton or button == rightButton:
+        switch_element("left" if button == leftButton else "right")
+        display_current_state()
 
 # Checks if attendance exists and create/update it depending on the return
 def handle_attendance_logic(student):
@@ -166,7 +189,10 @@ def handle_attendance_logic(student):
 
 try:
     while True:
-        display_current_state()
+        upButton.when_pressed = lambda: handle_button_press(upButton)
+        downButton.when_pressed = lambda: handle_button_press(downButton)
+        leftButton.when_pressed = lambda: handle_button_press(leftButton)
+        rightButton.when_pressed = lambda: handle_button_press(rightButton)
 
 except KeyboardInterrupt:
     print("Program terminated.")
