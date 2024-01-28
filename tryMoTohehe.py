@@ -168,7 +168,7 @@ def handle_attendance_logic(student):
             saved_report = attendances_collection.insert_one(new_attendance)
             print(new_attendance)
             print(f"New attendance report created with ID: {saved_report.inserted_id}")
-        time.sleep(5)
+        time.sleep(2)
     except Exception as e:
         print(f"Error generating attendance report: {e}")
         
