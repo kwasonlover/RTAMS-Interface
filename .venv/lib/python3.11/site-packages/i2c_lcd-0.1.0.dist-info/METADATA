@@ -1,0 +1,80 @@
+Metadata-Version: 2.0
+Name: i2c-lcd
+Version: 0.1.0
+Summary: I2C LCD interface in Python made for RPi.
+Home-page: https://github.com/pwlandoll/i2c_lcd
+Author: Peter Landoll
+Author-email: pwlandoll@gmail.com
+License: GNU General Public License v3
+Keywords: i2c_lcd
+Platform: UNKNOWN
+Classifier: Development Status :: 2 - Pre-Alpha
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: GNU General Public License v3 (GPLv3)
+Classifier: Natural Language :: English
+Classifier: Programming Language :: Python :: 2
+Classifier: Programming Language :: Python :: 2.6
+Classifier: Programming Language :: Python :: 2.7
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.3
+Classifier: Programming Language :: Python :: 3.4
+Classifier: Programming Language :: Python :: 3.5
+Requires-Dist: smbus-cffi (>=0.5.1)
+
+=======
+I2C LCD
+=======
+
+
+.. image:: https://img.shields.io/pypi/v/i2c_lcd.svg
+        :target: https://pypi.python.org/pypi/i2c_lcd
+
+.. image:: https://img.shields.io/travis/pwlandoll/i2c_lcd.svg
+        :target: https://travis-ci.org/pwlandoll/i2c_lcd
+
+.. image:: https://readthedocs.org/projects/i2c-lcd/badge/?version=latest
+        :target: https://i2c-lcd.readthedocs.io/en/latest/?badge=latest
+        :alt: Documentation Status
+
+.. image:: https://pyup.io/repos/github/pwlandoll/i2c_lcd/shield.svg
+     :target: https://pyup.io/repos/github/pwlandoll/i2c_lcd/
+     :alt: Updates
+
+
+I2C LCD interface in Python made for RPi.
+
+
+* Free software: GNU General Public License v3
+* Documentation: https://i2c-lcd.readthedocs.io.
+
+
+Features
+--------
+
+* Interface with I2C-connected LCD screens, by means of the SMBus, most commonly with Raspberry Pi boards.
+* Display text on the screen, given as a string or characters.
+
+Credits
+---------
+
+The code in this package is based almost entirely on code by DenisFromHR
+(Denis Pleic), taken 2017-3-26 from `GitHub Gists`_.
+
+This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypackage`_ project template.
+
+.. _Cookiecutter: https://github.com/audreyr/cookiecutter
+.. _`audreyr/cookiecutter-pypackage`: https://github.com/audreyr/cookiecutter-pypackage
+.. _GitHub Gists: https://gist.github.com/DenisFromHR/cc863375a6e19dce359d#file-rpi_i2c_driver-py
+
+
+
+=======
+History
+=======
+
+0.1.0 (2017-05-29)
+------------------
+
+* First release on PyPI.
+
+

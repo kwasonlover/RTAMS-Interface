@@ -1,0 +1,17 @@
+[Unit]
+Description = Run NFC Scanning Script
+
+[Service]
+Type=simple
+WorkingDirectory=/home/rpi4/Desktop/py532
+ExecStart=/home/rpi4/Desktop/py532/run_script.sh
+Restart=always
+RestartSec=3
+User=rpi4
+StandardOutput=tty
+StandardError=tty
+TTYPath=/dev/console
+Environment="PYTHONPATH=/home/rpi4/Desktop/py532/venv/lib/python3.11/site-packages"
+
+[Install]
+default.target
