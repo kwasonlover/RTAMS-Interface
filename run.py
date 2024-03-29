@@ -10,8 +10,6 @@ from gpiozero import Button
 import threading
 import time
 
-data_lock = threading.Lock()
-
 upButton = Button(17, pull_up=False)
 downButton = Button(18, pull_up=False)
 leftButton = Button(27, pull_up=False)
@@ -62,42 +60,41 @@ def update_payload(selected_key, selected_value):
 
 
 def handle_button_press(button):
-    global selected_row, selected_key, selected_value, data_lock
-    with data_lock:
-        if button == upButton or button == downButton:
-            selected_row = not selected_row 
-        elif button == leftButton:
-            if not selected_row:
-                current_index = list(data_dict[selected_key]).index(selected_value)
+    global selected_row, selected_key, selected_value
+    if button == upButton or button == downButton:
+        selected_row = not selected_row 
+    elif button == leftButton:
+        if not selected_row:
+            current_index = list(data_dict[selected_key]).index(selected_value)
 
 
-                if current_index > 0:
-                    new_index = current_index - 1
-                    selected_value = list(data_dict[selected_key])[new_index]
-                    update_payload(selected_key, selected_value)
-            else:
-                current_index = list(data_dict).index(selected_key)
-                if current_index > 0:
-                    selected_key = list(payload.keys())[current_index - 1]
-                    selected_value = payload[selected_key]
+            if current_index > 0:
+                new_index = current_index - 1
+                selected_value = list(data_dict[selected_key])[new_index]
+                update_payload(selected_key, selected_value)
+        else:
+            current_index = list(data_dict).index(selected_key)
+            if current_index > 0:
+                selected_key = list(payload.keys())[current_index - 1]
+                selected_value = payload[selected_key]
             
-        elif button == rightButton:
-            if not selected_row:
-                current_index = list(data_dict[selected_key]).index(selected_value)
-                max_index = len(data_dict[selected_key]) - 1
+    elif button == rightButton:
+        if not selected_row:
+            current_index = list(data_dict[selected_key]).index(selected_value)
+            max_index = len(data_dict[selected_key]) - 1
 
-                if current_index < max_index:
-                    new_index = current_index + 1
-                    selected_value = list(data_dict[selected_key])[new_index]
-                    update_payload(selected_key, selected_value)
-            else:
-                current_index = list(data_dict).index(selected_key)
-                max_index = len(list(data_dict)) - 1
-                if current_index < max_index:
-                    selected_key = list(payload.keys())[current_index + 1]
-                    selected_value = payload[selected_key]
-        checkSelectedRow()
-        time.sleep(0.75)
+            if current_index < max_index:
+                new_index = current_index + 1
+                selected_value = list(data_dict[selected_key])[new_index]
+                update_payload(selected_key, selected_value)
+        else:
+            current_index = list(data_dict).index(selected_key)
+            max_index = len(list(data_dict)) - 1
+            if current_index < max_index:
+                selected_key = list(payload.keys())[current_index + 1]
+                selected_value = payload[selected_key]
+    checkSelectedRow()
+    time.sleep(0.75)
 
 def checkSelectedRow(): 
     print("\n\n")
@@ -114,7 +111,6 @@ def checkSelectedRow():
 
 
 def read_nfc():
-    global data_lock
     try:
         while True: 
             card_data = pn532.read_mifare().get_data()
@@ -125,8 +121,7 @@ def read_nfc():
             if not student:
                 print("Student not found for the given NFC UID.")
             else:
-                with data_lock:
-                    handle_attendance_logic(student)
+                handle_attendance_logic(student)
 
     except Exception as e:
         print(f"Error generating attendance report: {e}")
@@ -171,13 +166,11 @@ def handle_attendance_logic(student):
         time.sleep(2)
     except Exception as e:
         print(f"Error generating attendance report: {e}")
-        
-nfc_thread = threading.Thread(target=read_nfc)
-nfc_thread.daemon = False  # Set the thread as a daemon to exit when the main program exits
-nfc_thread.start()
+
 
 try:
     while True:
+        read_nfc()
         # upButton.when_pressed = lambda: handle_button_press(upButton)
         # downButton.when_pressed = lambda: handle_button_press(downButton)
         # leftButton.when_pressed = lambda: handle_button_press(leftButton)
