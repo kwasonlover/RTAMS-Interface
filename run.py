@@ -178,10 +178,10 @@ nfc_thread.start()
 
 try:
     while True:
-        upButton.when_pressed = lambda: handle_button_press(upButton)
-        downButton.when_pressed = lambda: handle_button_press(downButton)
-        leftButton.when_pressed = lambda: handle_button_press(leftButton)
-        rightButton.when_pressed = lambda: handle_button_press(rightButton)
+        # upButton.when_pressed = lambda: handle_button_press(upButton)
+        # downButton.when_pressed = lambda: handle_button_press(downButton)
+        # leftButton.when_pressed = lambda: handle_button_press(leftButton)
+        # rightButton.when_pressed = lambda: handle_button_press(rightButton)
 
         time.sleep(0.2)
 except KeyboardInterrupt:
