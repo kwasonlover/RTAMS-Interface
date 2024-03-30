@@ -13,8 +13,10 @@ import time
 
 lcd = LCD(bus=0, width=16, rows=2)
 
+data_lock = threading.Lock()
+
 upButton = Button(17, pull_up=False)
-downButton = Button(18, pull_up=False)
+downButton = Button(23, pull_up=False)
 leftButton = Button(27, pull_up=False)
 rightButton = Button(22, pull_up=False)
 
@@ -31,13 +33,13 @@ sections_collection = db["sections"]
 
 data_dict = {}
 
-courses = list(courses_collection.find())
+courses = list(courses_collection.find({}, {'courseName': 1}))
 data_dict["courses"] = courses
 
-terms = list(terms_collection.find())
+terms = list(terms_collection.find({}, {'term': 1}))
 data_dict["term"] = terms
 
-sections = list(sections_collection.find())
+sections = list(sections_collection.find({}, {'section': 1}))
 data_dict["sections"] = sections
 
 payload = {
@@ -54,6 +56,7 @@ selected_value = payload[selected_key]  # Set the initial selected value
 print("initialized selected key: ", selected_key)
 print("initialized selected value: ", selected_value)
 
+
 def update_payload(selected_key, selected_value):
     global payload
     print("key from update",payload[selected_key])
@@ -63,41 +66,43 @@ def update_payload(selected_key, selected_value):
 
 
 def handle_button_press(button):
-    global selected_row, selected_key, selected_value
-    if button == upButton or button == downButton:
-        selected_row = not selected_row 
-    elif button == leftButton:
-        if not selected_row:
-            current_index = list(data_dict[selected_key]).index(selected_value)
+    global selected_row, selected_key, selected_value, data_lock
+    with data_lock:
+        if button == upButton or button == downButton:
+            selected_row = not selected_row 
+        elif button == leftButton:
+            if not selected_row:
+                current_index = list(data_dict[selected_key]).index(selected_value)
 
 
-            if current_index > 0:
-                new_index = current_index - 1
-                selected_value = list(data_dict[selected_key])[new_index]
-                update_payload(selected_key, selected_value)
-        else:
-            current_index = list(data_dict).index(selected_key)
-            if current_index > 0:
-                selected_key = list(payload.keys())[current_index - 1]
-                selected_value = payload[selected_key]
-            
-    elif button == rightButton:
-        if not selected_row:
-            current_index = list(data_dict[selected_key]).index(selected_value)
-            max_index = len(data_dict[selected_key]) - 1
+                if current_index > 0:
+                    new_index = current_index - 1
+                    selected_value = list(data_dict[selected_key])[new_index]
+                    update_payload(selected_key, selected_value)
+            else:
+                current_index = list(data_dict).index(selected_key)
+                if current_index > 0:
+                    selected_key = list(payload.keys())[current_index - 1]
+                    selected_value = payload[selected_key]
+                
+        elif button == rightButton:
+            if not selected_row:
+                current_index = list(data_dict[selected_key]).index(selected_value)
+                max_index = len(data_dict[selected_key]) - 1
 
-            if current_index < max_index:
-                new_index = current_index + 1
-                selected_value = list(data_dict[selected_key])[new_index]
-                update_payload(selected_key, selected_value)
-        else:
-            current_index = list(data_dict).index(selected_key)
-            max_index = len(list(data_dict)) - 1
-            if current_index < max_index:
-                selected_key = list(payload.keys())[current_index + 1]
-                selected_value = payload[selected_key]
-    checkSelectedRow()
-    time.sleep(0.75)
+                if current_index < max_index:
+                    new_index = current_index + 1
+                    selected_value = list(data_dict[selected_key])[new_index]
+                    update_payload(selected_key, selected_value)
+            else:
+                current_index = list(data_dict).index(selected_key)
+                max_index = len(list(data_dict)) - 1
+                if current_index < max_index:
+                    selected_key = list(payload.keys())[current_index + 1]
+                    selected_value = payload[selected_key]
+        checkSelectedRow()
+        display_lcd()
+        time.sleep(0.75)
 
 def checkSelectedRow(): 
     print("\n\n")
@@ -109,15 +114,41 @@ def checkSelectedRow():
         print(">", selected_value)
     print("current payload:", payload)
 
+def scroll_text(text, row):
+    if len(text) > 16:
+        for i in range(len(text) - 15):
+            lcd.text(text[i:i+16], row)
+            time.sleep(0.2)
+    else:
+        lcd.text(text, row)
+
+def display_lcd():
+    if selected_row:
+        lcd.text("> " + selected_key, 1)
+        if selected_key == 'courses':
+            scroll_text(selected_value['courseName'], 2)
+        elif selected_key == 'term':
+            scroll_text(selected_value['term'], 2)
+        elif selected_key == 'sections':
+            scroll_text(selected_value['section'], 2)
+    else:
+        lcd.text(selected_key, 1)
+        if selected_key == 'courses':
+            scroll_text("> " + selected_value['courseName'], 2)
+        elif selected_key == 'term':
+            scroll_text("> " + selected_value['term'], 2)
+        elif selected_key == 'sections':
+            scroll_text("> " + selected_value['section'], 2)
 
 # NFC-Related code/modules
 
 
 def read_nfc():
     try:
+        lcd.text('RTAMS', 1)
+        sleep(1)
+        scroll_text('Real-Time Attendance Monitoring System', 2)
         while True: 
-            lcd.text('Hello World!', 1)
-            lcd.text('Raspberry Pi', 2)
             card_data = pn532.read_mifare().get_data()
             card_data_formatted = ' '.join(format(x, '02X') for x in card_data)
             nfc_uid = ' '.join(card_data_formatted.split()[7:])
@@ -173,18 +204,21 @@ def handle_attendance_logic(student):
         print(f"Error generating attendance report: {e}")
 
 
+nfc_thread = threading.Thread(target=read_nfc)
+nfc_thread.daemon = False  # Set the thread as a daemon to exit when the main program exits
+nfc_thread.start()
+
 try:
     while True:
-        
-        read_nfc()
-        # upButton.when_pressed = lambda: handle_button_press(upButton)
-        # downButton.when_pressed = lambda: handle_button_press(downButton)
-        # leftButton.when_pressed = lambda: handle_button_press(leftButton)
-        # rightButton.when_pressed = lambda: handle_button_press(rightButton)
+        upButton.when_pressed = lambda: handle_button_press(upButton)
+        downButton.when_pressed = lambda: handle_button_press(downButton)
+        leftButton.when_pressed = lambda: handle_button_press(leftButton)
+        rightButton.when_pressed = lambda: handle_button_press(rightButton)
 
         time.sleep(0.2)
 except KeyboardInterrupt:
     print("Program terminated.")
+    lcd.clear()
 finally:
     if client:
         client.close()
