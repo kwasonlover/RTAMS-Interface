@@ -6,9 +6,12 @@ from pprint import pprint
 from datetime import datetime, timedelta
 from bson import ObjectId
 from gpiozero import Button
+from rpi_lcd import LCD
 
 import threading
 import time
+
+lcd = LCD(bus=0, width=16, rows=2)
 
 upButton = Button(17, pull_up=False)
 downButton = Button(18, pull_up=False)
@@ -113,6 +116,8 @@ def checkSelectedRow():
 def read_nfc():
     try:
         while True: 
+            lcd.text('Hello World!', 1)
+            lcd.text('Raspberry Pi', 2)
             card_data = pn532.read_mifare().get_data()
             card_data_formatted = ' '.join(format(x, '02X') for x in card_data)
             nfc_uid = ' '.join(card_data_formatted.split()[7:])
@@ -170,6 +175,7 @@ def handle_attendance_logic(student):
 
 try:
     while True:
+        
         read_nfc()
         # upButton.when_pressed = lambda: handle_button_press(upButton)
         # downButton.when_pressed = lambda: handle_button_press(downButton)
