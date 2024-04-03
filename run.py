@@ -148,6 +148,8 @@ def read_nfc():
         lcd.text('RTAMS', 1)
         sleep(1)
         scroll_text('Real-Time Attendance Monitoring System', 2)
+        sleep(1)
+        display_lcd()
         while True: 
             card_data = pn532.read_mifare().get_data()
             card_data_formatted = ' '.join(format(x, '02X') for x in card_data)
@@ -155,12 +157,22 @@ def read_nfc():
 
             student = students_collection.find_one({"nfcUID": nfc_uid})
             if not student:
-                print("Student not found for the given NFC UID.")
+                print("Student not found. Contact an administrator.")
+                lcd.clear()
+                scroll_text("Student not found.", 1)
+                scroll_text("Contact an administrator.", 2)
+                sleep(1)
+                lcd.clear()
+                display_lcd()
             else:
                 handle_attendance_logic(student)
 
     except Exception as e:
         print(f"Error generating attendance report: {e}")
+        scroll_text(f"Error generating attendance report: {e}")
+        sleep(1)
+        lcd.clear()
+        display_lcd()
 
 def handle_attendance_logic(student):
     global payload
@@ -180,10 +192,22 @@ def handle_attendance_logic(student):
                     {"_id": existing_attendance["_id"]},
                     {"$set": {"timeOut": existing_attendance["timeOut"]}}
                 )
-                print("Updated attendance report.")
+                print("Updated attendance record.")
+                lcd.clear()
+                scroll_text("Updated attendance", 1)
+                scroll_text("record.", 2)
+                sleep(1)
+                lcd.clear()
+                display_lcd()
             else:
-                print("Attendance already recorded for this course on the same day.")
-        
+                print("Attendance already exists for this course today.")
+                lcd.clear()
+                scroll_text("Attendance already exists", 1)
+                scroll_text("for this course today.", 2)
+                sleep(1)
+                lcd.clear()
+                display_lcd()
+                
         else:
             new_attendance = {
                 "student": student["_id"],
@@ -199,9 +223,16 @@ def handle_attendance_logic(student):
             saved_report = attendances_collection.insert_one(new_attendance)
             print(new_attendance)
             print(f"New attendance report created with ID: {saved_report.inserted_id}")
+            lcd.clear()
+            lcd.text("Attendance", 1)
+            lcd.text("recorded.", 2)
+            sleep(1)
+            lcd.clear()
+            display_lcd()
         time.sleep(2)
     except Exception as e:
         print(f"Error generating attendance report: {e}")
+        scroll_text(f"Error generating attendance report: {e}", 1)
 
 
 nfc_thread = threading.Thread(target=read_nfc)
