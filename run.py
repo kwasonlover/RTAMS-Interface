@@ -178,7 +178,7 @@ def handle_attendance_logic(student):
     global payload
     try:
         current_date = datetime.now().strftime("%Y:%m:%d")
-        current_time = datetime.now().strftime("%H:%M")
+        current_time = datetime.now().strftime("%I:%M %p")
         existing_attendance = attendances_collection.find_one({
             "student": student["_id"],
             "courseCode": payload["courses"]["_id"],
@@ -194,8 +194,8 @@ def handle_attendance_logic(student):
                 )
                 print("Updated attendance record.")
                 lcd.clear()
-                scroll_text("Updated attendance", 1)
-                scroll_text("record.", 2)
+                scroll_text("Updated", 1)
+                scroll_text("attendance.", 2)
                 sleep(1)
                 lcd.clear()
                 display_lcd()
