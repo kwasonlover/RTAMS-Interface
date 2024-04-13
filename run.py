@@ -27,13 +27,15 @@ client = MongoClient("mongodb+srv://ClintCalumpad:StrongPassword121@attendancemo
 db = client["rtams-dev"]
 students_collection = db["students"]
 attendances_collection = db["attendances"]
-courses_collection = db["courses"]
-terms_collection = db["term"]
+classlistsCollection = db["classlists"]  #classlists
+terms_collection = db["terms"]
 sections_collection = db["sections"]
 
 data_dict = {}
 
-courses = list(courses_collection.find({}, {'courseName': 1}))
+classlists = list(classlistsCollection.find({}, {'sectionCode' : 1, 'subjectCode': 1, 'term': 1, 'students' : 1})) #sectionCode, subjectCode, term, students
+# courses copy initialization
+courses = classlists
 data_dict["courses"] = courses
 
 terms = list(terms_collection.find({}, {'term': 1}))
@@ -48,7 +50,7 @@ payload = {
     "sections": data_dict["sections"][0],
 }
 
-selected_row = True  
+selected_row = True   
 
 selected_key = list(payload.keys())[0]  # Set the initial selected key
 selected_value = payload[selected_key]  # Set the initial selected value
@@ -63,8 +65,8 @@ def update_payload(selected_key, selected_value):
     index_in_data_dict = list(data_dict[selected_key]).index(selected_value)
 
     payload[selected_key] = data_dict[selected_key][index_in_data_dict]
-
-
+	#if selected key !courses (filter courses and update/reinitialize coursesCopy)
+ 
 def handle_button_press(button):
     global selected_row, selected_key, selected_value, data_lock
     with data_lock:
@@ -122,11 +124,12 @@ def scroll_text(text, row):
     else:
         lcd.text(text, row)
 
+
 def display_lcd():
     if selected_row:
         lcd.text("> " + selected_key, 1)
         if selected_key == 'courses':
-            scroll_text(selected_value['courseName'], 2)
+            scroll_text(selected_value['subjectCode'], 2)
         elif selected_key == 'term':
             scroll_text(selected_value['term'], 2)
         elif selected_key == 'sections':
@@ -134,11 +137,12 @@ def display_lcd():
     else:
         lcd.text(selected_key, 1)
         if selected_key == 'courses':
-            scroll_text("> " + selected_value['courseName'], 2)
+            scroll_text("> " + selected_value['subjectCode'], 2)
         elif selected_key == 'term':
             scroll_text("> " + selected_value['term'], 2)
         elif selected_key == 'sections':
             scroll_text("> " + selected_value['section'], 2)
+
 
 # NFC-Related code/modules
 
@@ -174,23 +178,33 @@ def read_nfc():
         lcd.clear()
         display_lcd()
 
+
 def handle_attendance_logic(student):
     global payload
     try:
+
+	#check if student is in payload.courses.students[]
         current_date = datetime.now().strftime("%Y:%m:%d")
         current_time = datetime.now().strftime("%I:%M %p")
         existing_attendance = attendances_collection.find_one({
             "student": student["_id"],
-            "courseCode": payload["courses"]["_id"],
+            "courseCode": payload["courses"]["_id"], #course nalang
             "date": current_date,
         })
+
+	
         
         if existing_attendance:
             if existing_attendance["timeIn"] and not existing_attendance["timeOut"]:
                 existing_attendance["timeOut"] = current_time
+
+		#get the difference of minutes between time in and out
+		#existing_attendance["hoursRendered"]= difference ng time in and out
+
+
                 attendances_collection.update_one(
                     {"_id": existing_attendance["_id"]},
-                    {"$set": {"timeOut": existing_attendance["timeOut"]}}
+                    {"$set": {"timeOut": existing_attendance["timeOut"]}} #also set the hoursRendered
                 )
                 print("Updated attendance record.")
                 lcd.clear()
@@ -219,6 +233,7 @@ def handle_attendance_logic(student):
                 "section": payload["sections"]["section"],
                 "timeIn": current_time,
                 "timeOut": None,
+		"hoursRendered": 0
             }
             saved_report = attendances_collection.insert_one(new_attendance)
             print(new_attendance)
@@ -233,6 +248,7 @@ def handle_attendance_logic(student):
     except Exception as e:
         print(f"Error generating attendance report: {e}")
         scroll_text(f"Error generating attendance report: {e}", 1)
+
 
 
 nfc_thread = threading.Thread(target=read_nfc)
