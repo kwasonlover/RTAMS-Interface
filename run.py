@@ -35,14 +35,16 @@ data_dict = {}
 
 classlists = list(classlistsCollection.find({}, {'sectionCode' : 1, 'subjectCode': 1, 'term': 1, 'students' : 1})) #sectionCode, subjectCode, term, students
 # courses copy initialization
-courses = classlists
-data_dict["courses"] = courses
+courses = classlists.copy() #check
+data_dict["courses"] = courses 
 
 terms = list(terms_collection.find({}, {'term': 1}))
 data_dict["term"] = terms
 
 sections = list(sections_collection.find({}, {'section': 1}))
 data_dict["sections"] = sections
+
+print("sections from api", sections)
 
 payload = {
     "courses": data_dict["courses"][0],
@@ -55,17 +57,51 @@ selected_row = True
 selected_key = list(payload.keys())[0]  # Set the initial selected key
 selected_value = payload[selected_key]  # Set the initial selected value
 
-print("initialized selected key: ", selected_key)
+print("initialized selected key: ", selected_key, type(selected_key))
 print("initialized selected value: ", selected_value)
+print("")
+print("Classlist", classlists)
+print("payload", payload)
+print("")
 
+
+print(str(payload["sections"]["_id"]))
+print(payload["courses"]["sectionCode"])
+print(str(payload["term"]["_id"]))
+print(payload["courses"]["term"])
 
 def update_payload(selected_key, selected_value):
     global payload
-    print("key from update",payload[selected_key])
+    global courses
+    print("key from update", payload[selected_key])
     index_in_data_dict = list(data_dict[selected_key]).index(selected_value)
-
     payload[selected_key] = data_dict[selected_key][index_in_data_dict]
-	#if selected key !courses (filter courses and update/reinitialize coursesCopy)
+    
+    if selected_key != "courses":
+        filtered_courses = []
+        plSection = str(payload["sections"]["_id"])
+        plTerm = str(payload["term"]["_id"])
+        
+        print("")
+        print("payload section", plSection, type(plSection))
+        print("payload term", plTerm, type(plTerm))
+        print("")
+        for course in classlists:
+            clSection = str(course["sectionCode"])
+            clTerm = str(course["term"])
+            if clSection == plSection and clTerm == plTerm:
+                filtered_courses.append(course)
+
+        courses = filtered_courses.copy() if filtered_courses else classlists.copy()
+        payload["courses"] = courses[0]
+        print("")
+        print("filtered courses",filtered_courses)
+        print("original classlist from api", classlists)
+        print("Courses copy:", courses)
+        data_dict["courses"] = courses
+
+    # index_in_data_dict = list(data_dict[selected_key]).index(selected_value)
+    # payload[selected_key] = data_dict[selected_key][index_in_data_dict]
  
 def handle_button_press(button):
     global selected_row, selected_key, selected_value, data_lock
@@ -104,7 +140,9 @@ def handle_button_press(button):
                     selected_value = payload[selected_key]
         checkSelectedRow()
         display_lcd()
-        time.sleep(0.75)
+        time.sleep(0.25)
+        print("\n\nat button press courses copy:", courses)
+        print("\n\npayload:", payload)
 
 def checkSelectedRow(): 
     print("\n\n")
@@ -177,6 +215,15 @@ def read_nfc():
         sleep(1)
         lcd.clear()
         display_lcd()
+        
+def calculate_hours_rendered(time_in_str, time_out_str):
+    time_format = "%H:%M"
+    time_in = datetime.strptime(time_in_str, time_format)
+    time_out = datetime.strptime(time_out_str, time_format)
+    time_difference = time_out - time_in
+    hours_rendered = time_difference.seconds // 3600  # Convert time difference to hours
+    minutes_rendered = (time_difference.seconds % 3600) // 60  # Convert remaining seconds to minutes
+    return minutes_rendered
 
 
 def handle_attendance_logic(student):
@@ -185,10 +232,10 @@ def handle_attendance_logic(student):
 
 	#check if student is in payload.courses.students[]
         current_date = datetime.now().strftime("%Y:%m:%d")
-        current_time = datetime.now().strftime("%I:%M %p")
+        current_time = datetime.now().strftime("%H:%M")
         existing_attendance = attendances_collection.find_one({
             "student": student["_id"],
-            "courseCode": payload["courses"]["_id"], #course nalang
+            "course": payload["courses"]["_id"], #course nalang
             "date": current_date,
         })
 
@@ -197,14 +244,16 @@ def handle_attendance_logic(student):
         if existing_attendance:
             if existing_attendance["timeIn"] and not existing_attendance["timeOut"]:
                 existing_attendance["timeOut"] = current_time
+                minutes_rendered = calculate_hours_rendered(existing_attendance["timeIn"], current_time)
 
 		#get the difference of minutes between time in and out
-		#existing_attendance["hoursRendered"]= difference ng time in and out
+		#existing_attendance["hoursRendered"]= the difference in minutes, even though it says hours rendered
 
 
                 attendances_collection.update_one(
                     {"_id": existing_attendance["_id"]},
-                    {"$set": {"timeOut": existing_attendance["timeOut"]}} #also set the hoursRendered
+                    {"$set": {"timeOut": existing_attendance["timeOut"], "hoursRendered": minutes_rendered}} 
+                    #also set the hoursRendered
                 )
                 print("Updated attendance record.")
                 lcd.clear()
@@ -227,13 +276,11 @@ def handle_attendance_logic(student):
                 "student": student["_id"],
                 "nfcUID": student["nfcUID"],
                 "studentName": student["name"],
-                "courseCode": payload["courses"]["_id"],
+                "course": payload["courses"]["_id"],
                 "date": current_date,
-                "term": payload["term"]["term"],  
-                "section": payload["sections"]["section"],
                 "timeIn": current_time,
                 "timeOut": None,
-		"hoursRendered": 0
+		        "hoursRendered": 0
             }
             saved_report = attendances_collection.insert_one(new_attendance)
             print(new_attendance)
