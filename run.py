@@ -187,10 +187,6 @@ def display_lcd():
 
 def read_nfc():
     try:
-        lcd.text('RTAMS', 1)
-        sleep(1)
-        scroll_text('Real-Time Attendance Monitoring System', 2)
-        sleep(1)
         display_lcd()
         while True: 
             card_data = pn532.read_mifare().get_data()
@@ -296,7 +292,10 @@ def handle_attendance_logic(student):
         print(f"Error generating attendance report: {e}")
         scroll_text(f"Error generating attendance report: {e}", 1)
 
-
+lcd.text('RTAMS', 1)
+sleep(1)
+scroll_text('Real-Time Attendance Monitoring System', 2)
+sleep(1)
 
 nfc_thread = threading.Thread(target=read_nfc)
 nfc_thread.daemon = False  # Set the thread as a daemon to exit when the main program exits
