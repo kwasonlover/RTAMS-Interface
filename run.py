@@ -16,9 +16,9 @@ lcd = LCD(bus=0, width=16, rows=2)
 data_lock = threading.Lock()
 
 upButton = Button(17, pull_up=False)
-downButton = Button(23, pull_up=False)
-leftButton = Button(27, pull_up=False)
-rightButton = Button(22, pull_up=False)
+downButton = Button(27, pull_up=False)
+leftButton = Button(22, pull_up=False)
+rightButton = Button(23, pull_up=False)
 
 pn532 = Pn532_i2c()
 pn532.SAMconfigure()
