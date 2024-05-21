@@ -24,7 +24,7 @@ pn532 = Pn532_i2c()
 pn532.SAMconfigure()
 
 client = MongoClient("mongodb+srv://ClintCalumpad:StrongPassword121@attendancemonitoringsys.uigzk5u.mongodb.net/?retryWrites=true&w=majority")
-db = client["rtams-dev"]
+db = client["rtams-prod"]
 students_collection = db["students"]
 attendances_collection = db["attendances"]
 classlistsCollection = db["classlists"]
