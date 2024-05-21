@@ -322,7 +322,7 @@ nfc_thread.start()
 try:
     while True:
         upButton.when_pressed = lambda: handle_button_press(upButton)
-        downButton.when_pressed = lambda: handle_button_press(downButton)
+        downButton.when_pressed = lambda:  handle_button_press(downButton)
         leftButton.when_pressed = lambda: handle_button_press(leftButton)
         rightButton.when_pressed = lambda: handle_button_press(rightButton)
 
@@ -331,5 +331,6 @@ except KeyboardInterrupt:
     print("Program terminated.")
     lcd.clear()
 finally:
+    lcd.clear()
     if client:
         client.close()
