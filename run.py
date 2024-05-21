@@ -24,18 +24,19 @@ pn532 = Pn532_i2c()
 pn532.SAMconfigure()
 
 client = MongoClient("mongodb+srv://ClintCalumpad:StrongPassword121@attendancemonitoringsys.uigzk5u.mongodb.net/?retryWrites=true&w=majority")
-db = client["rtams-dev"]
+db = client["rtams-prod"]
 students_collection = db["students"]
 attendances_collection = db["attendances"]
-classlistsCollection = db["classlists"]  #classlists
+classlistsCollection = db["classlists"]
 terms_collection = db["terms"]
 sections_collection = db["sections"]
+sessions_collection = db["sessions"]
 
 data_dict = {}
 
 classlists = list(classlistsCollection.find({}, {'sectionCode' : 1, 'subjectCode': 1, 'term': 1, 'students' : 1})) #sectionCode, subjectCode, term, students
 # courses copy initialization
-courses = classlists.copy() #check
+courses = classlists.copy()
 data_dict["courses"] = courses 
 
 terms = list(terms_collection.find({}, {'term': 1}))
@@ -233,6 +234,23 @@ def handle_attendance_logic(student):
 	#check if student is in payload.courses.students[]
         current_date = datetime.now().strftime("%Y:%m:%d")
         current_time = datetime.now().strftime("%H:%M")
+
+        # Check if there is an existing session for the current course where checked is False
+        existing_session = sessions_collection.find_one({
+            "classlist": payload["courses"]["_id"],
+            "checked": False
+        })
+        
+        # If no such session exists, create a new session
+        if not existing_session:
+            new_session = {
+                "classlist": payload["courses"]["_id"],
+                "date": current_date,
+                "checked": False
+            }
+            saved_session = sessions_collection.insert_one(new_session)
+            print(f"New session created with ID: {saved_session.inserted_id}")
+        
         existing_attendance = attendances_collection.find_one({
             "student": student["_id"],
             "course": payload["courses"]["_id"], #course nalang
