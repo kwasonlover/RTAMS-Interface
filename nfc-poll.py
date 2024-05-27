@@ -3,6 +3,11 @@ from py532lib.frame import *
 from py532lib.constants import *
 from rpi_lcd import LCD
 
+import logging
+
+logger = logging.getLogger()
+logging.basicConfig(level=logging.INFO)
+
 lcd = LCD(bus=0, width=16, rows=2)
 
 pn532 = Pn532_i2c()
@@ -17,5 +22,6 @@ while True:
     card_data = pn532.read_mifare().get_data()
     card_data_formatted = ' '.join(format(x, '02X') for x in card_data)
     nfc_uid = ' '.join(card_data_formatted.split()[7:])
+    logging.info(nfc_uid)
     print(nfc_uid)
     lcd.text(nfc_uid, 2)
