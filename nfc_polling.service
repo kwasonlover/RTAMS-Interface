@@ -1,0 +1,8 @@
+[Unit]
+Description=NFC Polling Script
+
+[Service]
+ExecStart=/home/rpi4/run_nfc_polling.sh
+
+[Install]
+WantedBy=multi-user.target

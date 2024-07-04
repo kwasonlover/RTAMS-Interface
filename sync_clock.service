@@ -1,0 +1,9 @@
+[Unit]
+Description=Clock synchronization script
+After=network.target
+
+[Service]
+ExecStart=/home/rpi4/Desktop/sync_clock.sh
+
+[Install]
+WantedBy=multi-user.target
